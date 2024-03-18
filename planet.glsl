@@ -24,15 +24,15 @@ float noise(vec3 x) {
                    mix(hash(n + 270.0), hash(n + 271.0), f.x), f.y), f.z);
 }
 
-Surface apply_octave_noise(Surface s, vec3 x, int octaves) {
-    float n = 0.0;
-    float a = 1.0;
+Surface apply_octave_noise(Surface s, vec3 x, int octaves, float factor) {
+    float n = 0.;
+    float a = factor < 1. ? 1. - factor : 1.;
     for(int i = 0; i < octaves; i++) {
         n += a * noise(x);
-        x *= 2.0;
+        x *= 2.;
         a *= 0.5;
     }
-    s.sd *= n;
+    s.sd -= factor * n;
     return s;
 }
 
@@ -43,8 +43,8 @@ Surface map(in vec3 pos) {
     Surface s = sdSphere(k, 0.5, vec3(0.0, 0.0, 1.0));
 
     // Add some noise
-    s = apply_octave_noise(s, k, 4);
-    s = apply_octave_noise(s, k * 2.0, 2);
+    s = apply_octave_noise(s, k, 4, .05);
+    s = apply_octave_noise(s, k * 2.0, 6, .5);
 
     return s;
 }
