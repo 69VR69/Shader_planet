@@ -8,6 +8,25 @@ Surface sdSphere(vec3 p, float s, vec3 col) {
     return Surface(d, col);
 }
 
+//rotate around point
+vec3 rotate(vec3 p, vec3 axis, float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+    return vec3(
+        p.x * (axis.x * axis.x * oc + c) +
+        p.y * (axis.x * axis.y * oc - axis.z * s) +
+        p.z * (axis.x * axis.z * oc + axis.y * s),
+        p.x * (axis.y * axis.x * oc + axis.z * s) +
+        p.y * (axis.y * axis.y * oc + c) +
+        p.z * (axis.y * axis.z * oc - axis.x * s),
+        p.x * (axis.z * axis.x * oc - axis.y * s) +
+        p.y * (axis.z * axis.y * oc + axis.x * s) +
+        p.z * (axis.z * axis.z * oc + c)
+    );
+}
+
+
 //Noise
 float hash(float n) {
     return fract(sin(n) * 43758.5453);
@@ -24,7 +43,7 @@ float noise(vec3 x) {
                    mix(hash(n + 270.0), hash(n + 271.0), f.x), f.y), f.z);
 }
 
-Surface apply_octave_noise(Surface s, vec3 x, int octaves, float factor) {
+Surface apply_octave_noise(in Surface s, vec3 x, int octaves, float factor) {
     float n = 0.;
     float a = factor < 1. ? 1. - factor : 1.;
     for(int i = 0; i < octaves; i++) {
@@ -40,13 +59,35 @@ Surface apply_octave_noise(Surface s, vec3 x, int octaves, float factor) {
 //includes Coloring
 Surface map(in vec3 pos) {
     vec3 k = pos;
-    Surface s = sdSphere(k, 0.5, vec3(0.0, 0.0, 1.0));
+    Surface s = sdSphere(k, 0.5, vec3(0.));
 
     // Add some noise
-    s = apply_octave_noise(s, k, 4, .05);
-    s = apply_octave_noise(s, k * 2.0, 6, .5);
+    Surface s1 = apply_octave_noise(s, k, 4, .5);
+    Surface s2 = apply_octave_noise(s1, k * 2.0, 2, .5);
+    s = apply_octave_noise(s, k * 4.0, 3, .5);
 
-    return s;
+    // Coloring depinding on the distance
+    const vec3 high_color = vec3(1.0, 0.0, 0.0);
+    const float high_level = 0.8;
+    const vec3 mid_color = vec3(0.0, 1.0, 0.0);
+    const float mid_level = 0.5;
+    const vec3 low_color = vec3(0.0, 0.0, 1.0);
+    const float low_level = 0.0;
+
+    // Coloring
+    float d = s.sd*2.;
+    
+    if(d>=high_level){
+        s2.col = high_color;
+    }else if(d>=mid_level){
+        s2.col = mix(mid_color, high_color, (d-mid_level)/(high_level-mid_level));
+    }else if(d>=low_level){
+        s2.col = mix(low_color, mid_color, (d-low_level)/(mid_level-low_level));
+    }else{
+        s2.col = low_color;
+    }
+
+    return s2;
 }
 
 vec3 calcNormal(in vec3 pos) {
@@ -100,6 +141,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 pos = ro + t * rd;
         vec3 nor = calcNormal(pos);
         vec3 lig = normalize(vec3(1.0, 1., 0.2));
+        lig = rotate(lig, vec3(0.0, 1.0, 0.5), 1.5 * iTime);
         float dif = clamp(dot(nor, lig), 0.0, 1.0);
         float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
         float amb = 0.5 + 0.5 * nor.y;
