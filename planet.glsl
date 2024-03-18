@@ -64,7 +64,6 @@ Surface map(in vec3 pos) {
     // Add some noise
     Surface s1 = apply_octave_noise(s, k, 4, .5);
     Surface s2 = apply_octave_noise(s1, k * 2.0, 2, .5);
-    s = apply_octave_noise(s, k * 4.0, 3, .5);
 
     // Coloring depinding on the distance
     const vec3 high_color = vec3(1.0, 0.0, 0.0);
@@ -75,7 +74,7 @@ Surface map(in vec3 pos) {
     const float low_level = 0.0;
 
     // Coloring
-    float d = s.sd*2.;
+    float d = s.sd*1.2;
     
     if(d>=high_level){
         s2.col = high_color;
