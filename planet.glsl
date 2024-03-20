@@ -15,6 +15,29 @@ Surface sdSphere(vec3 p, float s, vec3 col) {
     return Surface(d, col);
 }
 
+vec3 apply_coloring_by_height(in Surface s, in float base) {
+        // Coloring depending on the distance
+        const vec3 high_color = vec3(0.89, 0.42, 0.04);
+        float high_level = base + 0.2;
+        const vec3 mid_color = vec3(0.12, 0.47, 0.04);
+        float mid_level = base + 0.1;
+        const vec3 low_color = vec3(0.93, 0.12, 0.81);
+        float low_level = base + 0.0;
+
+        // Coloring
+        float d = s.sd*1.3;
+
+        if (d >= high_level) {
+            return high_color;
+        } else if (d >= mid_level && d < high_level) {
+            return mix(mid_color, high_color, (d - mid_level) / (high_level - mid_level));
+        } else if (d >= low_level && d < mid_level) {
+            return mix(low_color, mid_color, (d - low_level) / (mid_level - low_level));
+        } else if (d < low_level){
+            return low_color;
+        }
+    }
+
 //rotate around point
 vec3 rotate(vec3 p, vec3 axis, float angle) {
     float s = sin(angle);
@@ -126,28 +149,33 @@ float snoise(vec3 v)
                                 dot(p2,x2), dot(p3,x3) ) );
   }
  
-vec3 apply_coloring_by_height(in Surface s, in float base) {
-        // Coloring depending on the distance
-        const vec3 high_color = vec3(0.89, 0.42, 0.04);
-        float high_level = base + 0.2;
-        const vec3 mid_color = vec3(0.12, 0.47, 0.04);
-        float mid_level = base + 0.1;
-        const vec3 low_color = vec3(0.93, 0.12, 0.81);
-        float low_level = base + 0.0;
+ float accumulateNoises(Noise[10] noises, vec3 pos)
+ {
+    float result = 0.0;
 
-        // Coloring
-        float d = s.sd*1.3;
-
-        if (d >= high_level) {
-            return high_color;
-        } else if (d >= mid_level && d < high_level) {
-            return mix(mid_color, high_color, (d - mid_level) / (high_level - mid_level));
-        } else if (d >= low_level && d < mid_level) {
-            return mix(low_color, mid_color, (d - low_level) / (mid_level - low_level));
-        } else if (d < low_level){
-            return low_color;
+    for (int i = 0; i < noises.length(); i++)
+    {
+        Noise noise = noises[i];
+        
+        //if(noise.factor == 0.0) continue;
+        
+        float acc = 0.0;
+        for(int j = 0; j < noise.octaves; j++) {
+            acc += noise.gain * snoise(vec3(pos * noise.lacunarity));
         }
+
+        result += noise.factor * acc;
     }
+
+    return result;
+ }
+
+ Surface applyNoises(Surface s, vec3 pos, Noise[10] noises)
+ {
+    Surface result = s;
+    result.sd += accumulateNoises(noises, pos);
+    return result;
+ }
 
 //---------------------------------
 
@@ -156,27 +184,14 @@ Surface map(in vec3 pos) {
     Surface s = sdSphere(k, 03.5, vec3(0.));
 
     Noise[10] planetNoises;
-    float qualitydowngrader = 0.;
-    int six = int(6.0 * qualitydowngrader);
-    int ten = int(10.0 * qualitydowngrader);
-    planetNoises[0] = Noise(0.52, six, 2.2, 0.35);
-    planetNoises[1] = Noise(0.6, six, 1.4, 0.6);
-    planetNoises[2] = Noise(0.3, ten, 5., 0.1);
-    planetNoises[3] = Noise(0.2, ten, 9., 0.1);
+    planetNoises[0] = Noise(0.9, 1, 1., 0.5);
+    //planetNoises[1] = Noise(0.6, 6, 1.4, 0.6);
+    //planetNoises[2] = Noise(0.3, 10, 5., 0.1);
+    //planetNoises[3] = Noise(0.2, 10, 9., 0.1);
 
-    //Surface s2 = apply_noises(s, k, planetNoises);
-    Surface s2 = s;
-    float accumulated_simplex_noise =0.0;
+    Surface s2 = applyNoises(s, pos, planetNoises);
 
-    for(int i = 0; i < planetNoises.length(); i++) {
-        if(planetNoises[i].factor == 0.) continue;
-        float temp = planetNoises[i].factor * snoise(k * planetNoises[i].lacunarity);
-        s2.sd -= pow(temp,3.);
-    }
-
-    s2.sd -= accumulated_simplex_noise;
-
-    s2.col = apply_coloring_by_height(s, 0.0);
+    s2.col = sin(k*iTime) + cos((1.-k)*iTime);//apply_coloring_by_height(s, 0.0);
 
     return s2;
 }
@@ -268,7 +283,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 pos = ro + t * rd;
         vec3 nor = calcNormal(pos);
         vec3 lig = normalize(vec3(1.0, 1., 0.2));
-        lig = rotate(lig, vec3(1.0, 1., 1.), 1.5 * iTime);
+        lig = rotate(lig, vec3(1.0, 1., 1.), 2.5 * iTime);
         float dif = clamp(dot(nor, lig), 0.0, 1.0);
         float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
         float amb = 0.5 + 0.5 * nor.y;
