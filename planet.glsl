@@ -107,7 +107,7 @@ vec3 apply_coloring_by_height(in Surface s, in float base) {
 
 Surface map(in vec3 pos) {
     vec3 k = pos;
-    Surface s = sdSphere(k, 0.0005, vec3(0.));
+    Surface s = sdSphere(k, 0.5, vec3(0.));
 
     Noise[10] planetNoises;
     planetNoises[0] = Noise(0.52, 6, 2.2, 0.35);
@@ -147,14 +147,47 @@ float calcSoftshadow(in vec3 ro, in vec3 rd, float tmin, float tmax, const float
     return clamp(res, 0.0, 1.0);
 }
 
+// Camera
+
+// Set up a camera looking at the scene.
+// origin - camera is positioned relative to, and looking at, this point
+// dist(ance) - how far camera is from origin
+// rotation - about x & y axes, by left-hand screw rule, relative to camera looking along +z
+// zoom- the relative length of the lens
+
+vec3 localRay;
+void handleCamera(out vec3 pos, out vec3 ray, in vec3 origin, in vec2 rotation, in float dist, in float zoom, in vec2 fragCoord) {
+	// get rotation coefficients
+    vec2 c = vec2(cos(rotation.x), cos(rotation.y));
+    vec4 s;
+    s.xy = vec2(sin(rotation.x), sin(rotation.y)); // worth testing if this is faster as sin or sqrt(1.0-cos);
+    s.zw = -s.xy;
+
+	// ray in view space
+    ray.xy = fragCoord.xy - iResolution.xy * .5;
+    ray.z = iResolution.y * zoom;
+    ray = normalize(ray);
+    localRay = ray;
+
+	// rotate ray
+    ray.yz = ray.yz * c.xx + ray.zy * s.zx;
+    ray.xz = ray.xz * c.yy + ray.zx * s.yw;
+
+	// position camera
+    pos = origin - dist * vec3(c.x * s.y, s.z, c.x * c.y);
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 tot = vec3(0.0);
 
    // 1) Set up the Camera (primary ray for this pixel) 
     vec2 p = (-iResolution.xy + 2.0 * fragCoord) / iResolution.y;
 
-    vec3 ro = vec3(0., 3.0, 10.4);
-    vec3 rd = normalize(vec3(p - vec2(0.1, 1.9), -5));
+   // Camera Handling
+    vec2 cameraRotation = vec2(.5, .5) + vec2(-.35, 4.5) * (iMouse.yx / iResolution.yx);
+    vec3 ro, rd;
+    
+    handleCamera(ro, rd, vec3(0.), cameraRotation, 10.0, 1., fragCoord);
 
     Surface s; 
    // 2) Raymarching 
@@ -163,7 +196,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 p = ro + t * rd;
         s = map(p);
         float h = s.sd;
-        if(abs(h) < 0.0001 || t > 50.0)
+        if(abs(h) < 0.0001 || t > 20.0)
             break;
         t += h;
     }
@@ -174,11 +207,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 ambiant_color = vec3(0.05, 0.1, 0.15);
     vec3 light_color = vec3(0.97, 0.85, 0.78);
 
-    if(t < 50.0) {
+    if(t < 20.0) {
         vec3 pos = ro + t * rd;
         vec3 nor = calcNormal(pos);
         vec3 lig = normalize(vec3(1.0, 1., 0.2));
-        lig = rotate(lig, vec3(1.0, 0.3, 1.), 1.5 * iTime);
+        lig = rotate(lig, vec3(1.0, 1., 1.), 1.5 * iTime);
         float dif = clamp(dot(nor, lig), 0.0, 1.0);
         float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
         float amb = 0.5 + 0.5 * nor.y;
