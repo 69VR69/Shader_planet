@@ -80,7 +80,7 @@ float getFactorSum(Noise[10] noises) {
     return sum;
 }
  
-vec3 apply_coloring(in Surface s, in float base) {
+vec3 apply_coloring_by_height(in Surface s, in float base) {
         // Coloring depending on the distance
         const vec3 high_color = vec3(0.89, 0.42, 0.04);
         float high_level = base + 0.7;
@@ -119,7 +119,7 @@ Surface map(in vec3 pos) {
 
     float base = getFactorSum(planetNoises);
 
-    s2.col = apply_coloring(s, base);
+    s2.col = apply_coloring_by_height(s, base);
 
     return s2;
 }
