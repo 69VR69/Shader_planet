@@ -33,60 +33,106 @@ vec3 rotate(vec3 p, vec3 axis, float angle) {
     );
 }
 
-
-//Noise
-float hash(float n) {
-    return fract(sin(n) * 43758.5453);
+// Simplex noise
+vec3 mod289(vec3 x) {
+  return x - floor(x * (1.0 / 289.0)) * 289.0;
 }
 
-float noise(vec3 x) {
-    vec3 p = floor(x);
-    vec3 f = fract(x);
-    f = smoothstep(0.0, 1., f);
-    float n = p.x + p.y * 157.0 + 113.0 * p.z;
-    return mix(mix(mix(hash(n + 0.0), hash(n + 1.0), f.x),
-                   mix(hash(n + 157.0), hash(n + 158.0), f.x), f.y),
-               mix(mix(hash(n + 113.0), hash(n + 114.0), f.x),
-                   mix(hash(n + 270.0), hash(n + 271.0), f.x), f.y), f.z);
+vec4 mod289(vec4 x) {
+  return x - floor(x * (1.0 / 289.0)) * 289.0;
 }
 
-float fbm(vec3 x, int octaves, float lacunarity, float gain) {
-    float sum = 0.0;
-    float amp = 1.0;
-    float freq = 1.0;
-    for(int i = 0; i < octaves; i++) {
-        sum += amp * noise(x * freq);
-        amp *= gain;
-        freq *= lacunarity;
-    }
-    return sum;
+vec4 permute(vec4 x) {
+     return mod289(((x*34.0)+1.0)*x);
 }
 
-Surface apply_noises(in Surface s, vec3 x, Noise[10] n) {
-    float accumulated_noise = 0.;
-    for(int i = 0; i < n.length(); i++) {
-        if(n[i].factor == 0.) continue;
-        accumulated_noise += n[i].factor * fbm(x, n[i].octaves, n[i].lacunarity, n[i].gain);
-    }
-    s.sd -= accumulated_noise;
-    return s;
+vec4 taylorInvSqrt(vec4 r)
+{
+  return 1.79284291400159 - 0.85373472095314 * r;
 }
 
-float getFactorSum(Noise[10] noises) {
-    float sum = 0.;
-    for(int i = 0; i < noises.length(); i++) {
-        sum += noises[i].factor;
-    }
-    return sum;
-}
+float snoise(vec3 v)
+  {
+  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+
+// First corner
+  vec3 i  = floor(v + dot(v, C.yyy) );
+  vec3 x0 =   v - i + dot(i, C.xxx) ;
+
+// Other corners
+  vec3 g = step(x0.yzx, x0.xyz);
+  vec3 l = 1.0 - g;
+  vec3 i1 = min( g.xyz, l.zxy );
+  vec3 i2 = max( g.xyz, l.zxy );
+
+  //   x0 = x0 - 0.0 + 0.0 * C.xxx;
+  //   x1 = x0 - i1  + 1.0 * C.xxx;
+  //   x2 = x0 - i2  + 2.0 * C.xxx;
+  //   x3 = x0 - 1.0 + 3.0 * C.xxx;
+  vec3 x1 = x0 - i1 + C.xxx;
+  vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y
+  vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -0.5 = -D.y
+
+// Permutations
+  i = mod289(i);
+  vec4 p = permute( permute( permute(
+             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+           + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+
+// Gradients: 7x7 points over a square, mapped onto an octahedron.
+// The ring size 17*17 = 289 is close to a multiple of 49 (49*6 = 294)
+  float n_ = 0.142857142857; // 1.0/7.0
+  vec3  ns = n_ * D.wyz - D.xzx;
+
+  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);  //  mod(p,7*7)
+
+  vec4 x_ = floor(j * ns.z);
+  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)
+
+  vec4 x = x_ *ns.x + ns.yyyy;
+  vec4 y = y_ *ns.x + ns.yyyy;
+  vec4 h = 1.0 - abs(x) - abs(y);
+
+  vec4 b0 = vec4( x.xy, y.xy );
+  vec4 b1 = vec4( x.zw, y.zw );
+
+  //vec4 s0 = vec4(lessThan(b0,0.0))*2.0 - 1.0;
+  //vec4 s1 = vec4(lessThan(b1,0.0))*2.0 - 1.0;
+  vec4 s0 = floor(b0)*2.0 + 1.0;
+  vec4 s1 = floor(b1)*2.0 + 1.0;
+  vec4 sh = -step(h, vec4(0.0));
+
+  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+
+  vec3 p0 = vec3(a0.xy,h.x);
+  vec3 p1 = vec3(a0.zw,h.y);
+  vec3 p2 = vec3(a1.xy,h.z);
+  vec3 p3 = vec3(a1.zw,h.w);
+
+//Normalise gradients
+  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+  p0 *= norm.x;
+  p1 *= norm.y;
+  p2 *= norm.z;
+  p3 *= norm.w;
+
+// Mix final noise value
+  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+  m = m * m;
+  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),
+                                dot(p2,x2), dot(p3,x3) ) );
+  }
  
 vec3 apply_coloring_by_height(in Surface s, in float base) {
         // Coloring depending on the distance
         const vec3 high_color = vec3(0.89, 0.42, 0.04);
-        float high_level = base + 0.7;
+        float high_level = base + 0.2;
         const vec3 mid_color = vec3(0.12, 0.47, 0.04);
-        float mid_level = base + 0.5;
-        const vec3 low_color = vec3(0.13, 0.33, 0.88);
+        float mid_level = base + 0.1;
+        const vec3 low_color = vec3(0.93, 0.12, 0.81);
         float low_level = base + 0.0;
 
         // Coloring
@@ -107,19 +153,30 @@ vec3 apply_coloring_by_height(in Surface s, in float base) {
 
 Surface map(in vec3 pos) {
     vec3 k = pos;
-    Surface s = sdSphere(k, 0.5, vec3(0.));
+    Surface s = sdSphere(k, 03.5, vec3(0.));
 
     Noise[10] planetNoises;
-    planetNoises[0] = Noise(0.52, 6, 2.2, 0.35);
-    planetNoises[1] = Noise(0.6, 6, 1.4, 0.6);
-    planetNoises[2] = Noise(0.3, 10, 5., 0.1);
-    planetNoises[3] = Noise(0.2, 10, 9., 0.1);
+    float qualitydowngrader = 0.;
+    int six = int(6.0 * qualitydowngrader);
+    int ten = int(10.0 * qualitydowngrader);
+    planetNoises[0] = Noise(0.52, six, 2.2, 0.35);
+    planetNoises[1] = Noise(0.6, six, 1.4, 0.6);
+    planetNoises[2] = Noise(0.3, ten, 5., 0.1);
+    planetNoises[3] = Noise(0.2, ten, 9., 0.1);
 
-    Surface s2 = apply_noises(s, k, planetNoises);
+    //Surface s2 = apply_noises(s, k, planetNoises);
+    Surface s2 = s;
+    float accumulated_simplex_noise =0.0;
 
-    float base = getFactorSum(planetNoises);
+    for(int i = 0; i < planetNoises.length(); i++) {
+        if(planetNoises[i].factor == 0.) continue;
+        float temp = planetNoises[i].factor * snoise(k * planetNoises[i].lacunarity);
+        s2.sd -= pow(temp,3.);
+    }
 
-    s2.col = apply_coloring_by_height(s, base);
+    s2.sd -= accumulated_simplex_noise;
+
+    s2.col = apply_coloring_by_height(s, 0.0);
 
     return s2;
 }
@@ -215,7 +272,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float dif = clamp(dot(nor, lig), 0.0, 1.0);
         float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
         float amb = 0.5 + 0.5 * nor.y;
-        col = vec3(0.05, 0.1, 0.15) * amb + light_color * dif * sha * s.col;
+        col = ambiant_color * amb + light_color * dif * sha * s.col;
     }
 
     col = sqrt(col);
