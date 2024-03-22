@@ -299,7 +299,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec2 p = (-iResolution.xy + 2.0 * fragCoord) / iResolution.y;
 
    // Camera Handling
-    vec2 cameraRotation = vec2(.5, .5) + vec2(-.35, 4.5) * (iMouse.yx / iResolution.yx);
+    float roationSpeed = 0.05;
+    vec2 cameraRotation = vec2(.5, .5) + vec2(-.35, 4.5) * vec2(iTime * roationSpeed, iTime * roationSpeed);
     vec3 ro, rd;
     float minRenderDistance = 0.1, maxRenderDistance = 20.0;
 
@@ -327,8 +328,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     {
         vec3 pos = ro + minRenderDistance * rd;
         vec3 nor = calcNormal(pos);
-        vec3 lig = normalize(vec3(0.8, 0.8,-1.));
-        lig = rotate(lig, vec3(0.1, 0.1, 0.), 1.3 * iTime); // Rotate the light around the planet
+        vec3 lig = normalize(vec3(0.8, 0.8, -1.));
+        lig = rotate(lig, vec3(0.1, 0.1, 0.), 1. * iTime); // Rotate the light around the planet
         float dif = clamp(dot(nor, lig), 0.0, 1.0);
         float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
         float amb = 0.5 + 0.5 * nor.y;
