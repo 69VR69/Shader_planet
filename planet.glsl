@@ -10,22 +10,28 @@ struct Noise {
     float gain; // factor that determines how much the amplitude of the noise decreases with each octave
 };
 
+float opSmoothUnion( float d1, float d2, float k )
+{
+    float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
+    return mix( d2, d1, h ) - k*h*(1.0-h);
+}
+
 Surface sdSphere(vec3 p, float s, vec3 col) {
     float d = length(p) - s;
     return Surface(d, col);
-}
+    }
 
-vec3 apply_coloring_by_height(in Surface s, in float base) {
+vec3 apply_coloring_by_height(in Surface s) {
         // Coloring depending on the distance
         const vec3 high_color = vec3(0.89, 0.42, 0.04);
-        float high_level = base + 0.2;
+        float high_level = 0.2;
         const vec3 mid_color = vec3(0.12, 0.47, 0.04);
-        float mid_level = base + 0.1;
+        float mid_level = 0.1;
         const vec3 low_color = vec3(0.93, 0.12, 0.81);
-        float low_level = base + 0.0;
+        float low_level = 0.0;
 
         // Coloring
-        float d = s.sd*1.3;
+        float d = s.sd*1.2;
 
         if (d >= high_level) {
             return high_color;
@@ -149,7 +155,7 @@ float snoise(vec3 v)
                                 dot(p2,x2), dot(p3,x3) ) );
   }
  
- float accumulateNoises(Noise[10] noises, vec3 pos)
+ float accumulateNoises(Noise[10] noises, vec3 pos, float height)
  {
     float result = 0.0;
 
@@ -157,7 +163,7 @@ float snoise(vec3 v)
     {
         Noise noise = noises[i];
         
-        //if(noise.factor == 0.0) continue;
+        if(noise.factor == 0.0) continue;
         
         float acc = 0.0;
         for(int j = 0; j < noise.octaves; j++) {
@@ -170,10 +176,19 @@ float snoise(vec3 v)
     return result;
  }
 
- Surface applyNoises(Surface s, vec3 pos, Noise[10] noises)
+// Used to create mountains and valleys
+ Surface applyUpperNoises(Surface s, vec3 pos, Noise[10] noises)
  {
     Surface result = s;
-    result.sd += accumulateNoises(noises, pos);
+    result.sd += accumulateNoises(noises, pos, s.sd);
+    return result;
+ }
+
+// Used to create oceans and lakes reliefs
+ Surface applyLowerNoises(Surface s, vec3 pos, Noise[10] noises)
+ {
+    Surface result = s;
+    result.sd -= abs(accumulateNoises(noises, pos, s.sd));
     return result;
  }
 
@@ -181,17 +196,17 @@ float snoise(vec3 v)
 
 Surface map(in vec3 pos) {
     vec3 k = pos;
-    Surface s = sdSphere(k, 03.5, vec3(0.));
+    Surface s = sdSphere(k, 2.5, vec3(0.0));
 
-    Noise[10] planetNoises;
-    planetNoises[0] = Noise(0.9, 1, 1., 0.5);
-    //planetNoises[1] = Noise(0.6, 6, 1.4, 0.6);
-    //planetNoises[2] = Noise(0.3, 10, 5., 0.1);
-    //planetNoises[3] = Noise(0.2, 10, 9., 0.1);
+    Noise[10] planetUpperNoises;
+    planetUpperNoises[0] = Noise(0.4, 1, 0.65, 0.7);
+    planetUpperNoises[1] = Noise(0.3, 1, 1.4, 0.2);
+    planetUpperNoises[2] = Noise(0.3, 3, 3., 0.01);
+    planetUpperNoises[3] = Noise(0.2, 5, 9., 0.005);
 
-    Surface s2 = applyNoises(s, pos, planetNoises);
-
-    s2.col = sin(k*iTime) + cos((1.-k)*iTime);//apply_coloring_by_height(s, 0.0);
+    Surface s2 = applyUpperNoises(s, pos, planetUpperNoises);
+    s2.sd = min(s.sd+0.03, s2.sd);
+    s2.col = apply_coloring_by_height(s);
 
     return s2;
 }
@@ -226,7 +241,6 @@ float calcSoftshadow(in vec3 ro, in vec3 rd, float tmin, float tmax, const float
 // dist(ance) - how far camera is from origin
 // rotation - about x & y axes, by left-hand screw rule, relative to camera looking along +z
 // zoom- the relative length of the lens
-
 vec3 localRay;
 void handleCamera(out vec3 pos, out vec3 ray, in vec3 origin, in vec2 rotation, in float dist, in float zoom, in vec2 fragCoord) {
 	// get rotation coefficients
@@ -258,19 +272,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
    // Camera Handling
     vec2 cameraRotation = vec2(.5, .5) + vec2(-.35, 4.5) * (iMouse.yx / iResolution.yx);
     vec3 ro, rd;
+    float minRenderDistance = 0.1, maxRenderDistance = 20.0;
     
     handleCamera(ro, rd, vec3(0.), cameraRotation, 10.0, 1., fragCoord);
 
-    Surface s; 
+    Surface s;
    // 2) Raymarching 
-    float t = 0.1;
     for(int i = 0; i < 256; i++) {
-        vec3 p = ro + t * rd;
+        vec3 p = ro + minRenderDistance * rd;
         s = map(p);
         float h = s.sd;
-        if(abs(h) < 0.0001 || t > 20.0)
+        if(abs(h) < 0.0001 || minRenderDistance > maxRenderDistance)
             break;
-        t += h;
+        minRenderDistance += h;
     }
 
     vec3 col = vec3(0.0);
@@ -279,18 +293,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 ambiant_color = vec3(0.05, 0.1, 0.15);
     vec3 light_color = vec3(0.97, 0.85, 0.78);
 
-    if(t < 20.0) {
-        vec3 pos = ro + t * rd;
+    if(minRenderDistance < maxRenderDistance) {
+        vec3 pos = ro + minRenderDistance * rd;
         vec3 nor = calcNormal(pos);
-        vec3 lig = normalize(vec3(1.0, 1., 0.2));
+        vec3 lig = normalize(vec3(0., -50., -10.));
         lig = rotate(lig, vec3(1.0, 1., 1.), 2.5 * iTime);
         float dif = clamp(dot(nor, lig), 0.0, 1.0);
         float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
         float amb = 0.5 + 0.5 * nor.y;
         col = ambiant_color * amb + light_color * dif * sha * s.col;
     }
+    else {
+        vec3 pos = ro + maxRenderDistance * rd;
+        // Use a sphere to create a atmosphere around the planet
+        Surface atmosphere =  sdSphere(pos, 3.5, vec3(0.5,0.5,0.0));
+        if(atmosphere.sd < 0.0) {
+            col = atmosphere.col;
+        }
+    }
 
+    // Gamma correction
     col = sqrt(col);
+
     tot += col;
 
     fragColor = vec4(tot, 1.0);
