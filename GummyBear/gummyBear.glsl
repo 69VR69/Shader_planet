@@ -4,6 +4,9 @@ struct Surface
 {
   float sd; // signed distance value
   vec3 col; // color
+  vec3 emission; // emission color
+  float roughness; // surface roughness
+  float metallic; // metallic property
 };
 
 ///////////////////////////////////////////////////////////
@@ -11,6 +14,14 @@ struct Surface
 float opUnion(float d1, float d2)
 {
   return min(d1, d2);
+}
+
+Surface opUnion(Surface s1, Surface s2)
+{
+  if(s1.sd < s2.sd)
+    return s1;
+  else
+    return s2;
 }
 
 float opSmoothUnion(float d1, float d2, float k)
@@ -41,9 +52,13 @@ float sdCutSphere(vec3 p, float r, float h)
   return (s < 0.0) ? length(q) - r : (q.x < w) ? h - q.y : length(q - vec2(w, h));
 }
 
-///////////////////////////////////////////////////////////////
+float sdPlane(vec3 p, vec3 n, float h)
+{
+  // n must be normalized
+  return dot(p, n) + h;
+}
 
-Surface map(in vec3 pos)
+Surface sdGummyBear(vec3 pos)
 {
   vec3 p = pos;
   float body = sdRoundBox(pos, vec3(.7, 2., 1.), 0.2);
@@ -67,7 +82,17 @@ Surface map(in vec3 pos)
   float lFoot = sdCutSphere(p, .5, 0.1);
   bear = opSmoothUnion(bear, lFoot, 0.5);
 
-  return Surface(bear, vec3(1.0, 0.0, 0.0));
+  return Surface(bear, vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0.0, 0.0);
+}
+
+///////////////////////////////////////////////////////////////
+
+Surface map(in vec3 pos)
+{
+  vec3 p = pos + vec3(0.0, -2.0, 0.0);
+  Surface bear = sdGummyBear(p);
+
+  return bear;
 }
 
 vec3 calcNormal(in vec3 pos)
@@ -133,7 +158,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
    //Better Camera 
   vec2 camRot = vec2(.5, .5) + vec2(-.35, 4.5) * (iMouse.yx / iResolution.yx);
   vec3 ro, rd;
-  CamPolar(ro, rd, vec3(0), camRot, 7.0, 1.0, fragCoord);
+  CamPolar(ro, rd, vec3(0), camRot, 15.0, 1.0, fragCoord);
 
   float t = 0.1;
   float tend = 15.;
