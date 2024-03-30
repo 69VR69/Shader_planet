@@ -160,7 +160,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float dif = clamp(dot(nor, lig), 0.0, 1.0);
     float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
     float amb = 0.5 + 0.5 * nor.y;
-    col = ambiant_color * amb + light_color * dif * sha * s.col;
+    col = ambiant_color * amb + light_color * dif * sha * s.col * reflect(rd, nor);
   }
 
   col = sqrt(col);
