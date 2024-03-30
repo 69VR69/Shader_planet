@@ -160,7 +160,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float dif = clamp(dot(nor, lig), 0.0, 1.0);
     float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
     float amb = 0.5 + 0.5 * nor.y;
-    col = ambiant_color * amb + light_color * dif * sha * s.col * reflect(rd, nor);
+
+    // Glass effect
+    vec3 refl = reflect(rd, nor);
+    vec3 refr = refract(rd, nor, 1.0 / 1.5);
+    vec3 glassCol = vec3(0.8, 0.9, 1.0);
+    float fresnel = 0.1 + 0.9 * pow(1.0 - dot(-rd, nor), 5.0);
+    col = ambiant_color * amb + light_color * dif * sha * s.col * (1.0 - fresnel) + glassCol * fresnel * texture(iChannel0, p + refr.xy * 0.1).rgb;
   }
 
   col = sqrt(col);
