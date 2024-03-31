@@ -173,7 +173,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     t += h;
   }
 
-  vec3 col = texture(iChannel0, p).rgb;
+  vec3 col = texture(iChannel0, p / iResolution.xy).rgb;
 
   vec3 ambiant_color = vec3(0.0, 0.02, 0.03);
   vec3 light_color = vec3(0.97, 0.85, 0.78);
@@ -191,7 +191,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 refr = refract(rd, nor, 1.0 / 1.5);
     vec3 glassCol = vec3(0.8, 0.9, 1.0);
     float fresnel = 0.1 + 0.9 * pow(1.0 - dot(-rd, nor), 5.0);
-    col = ambiant_color * amb + light_color * dif * sha * s.col * (1.0 - fresnel) + glassCol * fresnel * texture(iChannel0, p + refr.xy * 0.1).rgb;
+    col = ambiant_color * amb + light_color * dif * sha * s.col * (1.0 - fresnel) + glassCol * fresnel * texture(iChannel0, p + refr.xy * 0.1).rgb + 0.1 * texture(iChannel0, p + refl.xy * 0.1).rgb;
   }
 
   col = sqrt(col);
