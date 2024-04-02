@@ -52,6 +52,29 @@ float sdCutSphere(vec3 p, float r, float h)
   return (s < 0.0) ? length(q) - r : (q.x < w) ? h - q.y : length(q - vec2(w, h));
 }
 
+vec3 rotate(vec3 p, vec3 angle)
+{
+  float a = angle.x;
+  float b = angle.y;
+  float c = angle.z;
+  float sina = sin(a);
+  float cosa = cos(a);
+  float sinb = sin(b);
+  float cosb = cos(b);
+  float sinc = sin(c);
+  float cosc = cos(c);
+  mat3 ma = mat3(cosa, 0, sina, 0, 1, 0, -sina, 0, cosa);
+  mat3 mb = mat3(1, 0, 0, 0, cosb, -sinb, 0, sinb, cosb);
+  mat3 mc = mat3(cosc, -sinc, 0, sinc, cosc, 0, 0, 0, 1);
+  return mc * mb * ma * p;
+}
+
+float sdRotatedCutSphere(vec3 p, float r, float h, vec3 angle)
+{
+  p = rotate(p, angle); // Rotate the point
+  return sdCutSphere(p, r, h);
+}
+
 float sdPlane(vec3 p, vec3 n, float h)
 {
   // n must be normalized
@@ -65,13 +88,13 @@ Surface sdGummyBear(vec3 pos)
   float bear = body;
 
     // Hands
-  p = pos + vec3(-.7, -0.2, -.8);
+  p = pos + vec3(-.7, -0.6, -.8);
   float rHand = sdSphere(p, .5);
-  bear = opSmoothUnion(bear, rHand, 0.7);
+  bear = opSmoothUnion(bear, rHand, 0.5);
 
-  p = pos + vec3(-.7, -0.2, .8);
+  p = pos + vec3(-.7, -0.6, .8);
   float lHand = sdSphere(p, .5);
-  bear = opSmoothUnion(bear, lHand, 0.7);
+  bear = opSmoothUnion(bear, lHand, 0.5);
 
     // Foots
   p = pos + vec3(-.7, 2.1, -.6);
@@ -81,6 +104,20 @@ Surface sdGummyBear(vec3 pos)
   p = pos + vec3(-.7, 2.1, .6);
   float lFoot = sdCutSphere(p, .5, 0.1);
   bear = opSmoothUnion(bear, lFoot, 0.5);
+
+  // Head
+  p = pos + vec3(0., -2.4, 0.);
+  float head = sdRoundBox(p, vec3(0.77, 0.7, 1.), 0.3);
+  bear = opSmoothUnion(bear, head, 0.2);
+
+  // Ears
+  p = pos + vec3(-0.5, -3., -.8);
+  float rEar = sdRotatedCutSphere(p, .5, 0.01, vec3(0., 0.5, 01.5));
+  bear = opSmoothUnion(bear, rEar, 0.4);
+
+  p = pos + vec3(-0.5, -3., .8);
+  float lEar = sdRotatedCutSphere(p, .5, 0.01, vec3(0., -0.5, 01.5));
+  bear = opSmoothUnion(bear, lEar, 0.4);
 
   return Surface(bear, vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0.0, 0.0);
 }
