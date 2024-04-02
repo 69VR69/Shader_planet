@@ -10,17 +10,6 @@ struct Surface
 };
 
 ///////////////////////////////////////////////////////////
-
-float rand(vec2 co)
-{
-  return fract(sin(dot(co.xy, vec2(12.9898, 78.233)) * 43758.5453));
-}
-
-float opUnion(float d1, float d2)
-{
-  return min(d1, d2);
-}
-
 Surface opUnion(Surface s1, Surface s2)
 {
   if(s1.sd < s2.sd)
@@ -72,23 +61,6 @@ vec3 rotate(vec3 p, vec3 angle)
   mat3 mb = mat3(1, 0, 0, 0, cosb, -sinb, 0, sinb, cosb);
   mat3 mc = mat3(cosc, -sinc, 0, sinc, cosc, 0, 0, 0, 1);
   return mc * mb * ma * p;
-}
-
-vec3 rotate(vec3 p, vec3 angle, vec3 center)
-{
-  float a = angle.x;
-  float b = angle.y;
-  float c = angle.z;
-  float sina = sin(a);
-  float cosa = cos(a);
-  float sinb = sin(b);
-  float cosb = cos(b);
-  float sinc = sin(c);
-  float cosc = cos(c);
-  mat3 ma = mat3(cosa, 0, sina, 0, 1, 0, -sina, 0, cosa);
-  mat3 mb = mat3(1, 0, 0, 0, cosb, -sinb, 0, sinb, cosb);
-  mat3 mc = mat3(cosc, -sinc, 0, sinc, cosc, 0, 0, 0, 1);
-  return mc * mb * ma * (p - center) + center;
 }
 
 float sdRotatedCutSphere(vec3 p, float r, float h, vec3 angle)
@@ -167,7 +139,7 @@ Surface sdGummyBear(vec3 pos, float scale, vec3 angle)
 Surface map(in vec3 pos)
 {
   vec3 p = pos + vec3(0.0, -2.0, 0.0);
-  Surface bear = sdGummyBear(p, 1.5, vec3(0.5, 0.9, 0.5));
+  Surface bear = sdGummyBear(p, 1.5, vec3(0.0));
 /*
   Surface plane = sdPlane(pos, vec3(0.0, 1.0, 0.0), 0.0, vec3(1.0), vec3(0.0), 0., 0.1);
 
@@ -231,10 +203,7 @@ void CamPolar(out vec3 pos, out vec3 ray, in vec3 origin, in vec2 rotation, in f
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
   vec3 tot = vec3(0.0);
-
-  vec2 p = (-iResolution.xy + 2.0 * fragCoord) / iResolution.y; 
-   //center of screen: (0,0)
-   //dimensions: +/- 0.5
+  vec2 p = (-iResolution.xy + 2.0 * fragCoord) / iResolution.y;
 
    //Better Camera 
   vec2 camRot = vec2(.5, .5) + vec2(-.35, 4.5) * (iMouse.yx / iResolution.yx);
