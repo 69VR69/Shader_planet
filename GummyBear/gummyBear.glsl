@@ -74,6 +74,11 @@ vec3 rotate(vec3 p, vec3 angle)
   return mc * mb * ma * p;
 }
 
+vec3 rotate(vec3 p, vec3 angle, vec3 center)
+{
+  return rotate(p - center, angle) + center;
+}
+
 float sdRotatedCutSphere(vec3 p, float r, float h, vec3 angle)
 {
   p = rotate(p, angle); // Rotate the point
@@ -97,48 +102,56 @@ Surface sdPlane(vec3 p, vec3 n, float h, vec3 col, vec3 emission, float roughnes
   return s;
 }
 
-Surface sdGummyBear(vec3 pos, float scale, float angle)
+Surface sdGummyBear(vec3 pos, float scale, vec3 angle)
 {
-  vec3 p = pos;
-  float body = sdRoundBox(pos, vec3(.7 * scale, 2. * scale, 1. * scale), 0.2 * scale);
+  vec3 center = pos + scale * vec3(0.0, -1., 0.0);
+
+  // Center point
+  float c = sdSphere(center, 1.5);
+  Surface cent = Surface(c, vec3(0.0, 1.0, 0.0), vec3(0.5, 0.5, 0.5), 0., 0.);
+
+  vec3 p = rotate(pos, angle, center);
+  float body = sdRoundBox(p, vec3(.7 * scale, 2. * scale, 1. * scale), 0.2 * scale);
   float bear = body;
 
-    // Hands
-  p = pos + vec3(-.7 * scale, -0.6 * scale, -.8 * scale);
+  // Hands
+  p = rotate(pos + vec3(-.7 * scale, -0.6 * scale, -.8 * scale), angle, center);
   float rHand = sdSphere(p, .5 * scale);
   bear = opSmoothUnion(bear, rHand, 0.5 * scale);
 
-  p = pos + vec3(-.7 * scale, -0.6 * scale, .8 * scale);
+  p = rotate(pos + vec3(-.7 * scale, -0.6 * scale, .8 * scale), angle, center);
   float lHand = sdSphere(p, .5 * scale);
   bear = opSmoothUnion(bear, lHand, 0.5 * scale);
 
-    // Foots
-  p = pos + vec3(-.7 * scale, 2.1 * scale, -.6 * scale);
+  // Foots
+  p = rotate(pos + vec3(-.7 * scale, 2.1 * scale, -.6 * scale), angle, center);
   float rFoot = sdCutSphere(p, .5 * scale, 0.1 * scale);
   bear = opSmoothUnion(bear, rFoot, 0.5 * scale);
 
-  p = pos + vec3(-.7 * scale, 2.1 * scale, .6 * scale);
+  p = rotate(pos + vec3(-.7 * scale, 2.1 * scale, .6 * scale), angle, center);
   float lFoot = sdCutSphere(p, .5 * scale, 0.1 * scale);
   bear = opSmoothUnion(bear, lFoot, 0.5 * scale);
 
   // Head
-  p = pos + vec3(0., -2.4 * scale, 0.);
+  p = rotate(pos + vec3(0., -2.4 * scale, 0.), angle, center);
   float head = sdRoundBox(p, vec3(0.77 * scale, 0.7 * scale, 1. * scale), 0.3 * scale);
   bear = opSmoothUnion(bear, head, 0.2 * scale);
 
   // Ears
-  p = pos + vec3(-0.5 * scale, -3. * scale, -.8 * scale);
+  p = rotate(pos + vec3(-0.5 * scale, -3. * scale, -.8 * scale), angle, center);
   float rEar = sdRotatedCutSphere(p, .5 * scale, 0.01 * scale, vec3(0., 0.5, 01.5));
   bear = opSmoothUnion(bear, rEar, 0.4 * scale);
 
-  p = pos + vec3(-0.5 * scale, -3. * scale, .8 * scale);
+  p = rotate(pos + vec3(-0.5 * scale, -3. * scale, .8 * scale), angle, center);
   float lEar = sdRotatedCutSphere(p, .5 * scale, 0.01 * scale, vec3(0., -0.5, 01.5));
   bear = opSmoothUnion(bear, lEar, 0.4 * scale);
 
   vec3 color = vec3(1.0, 0.0, 0.0);
   vec3 emissionColor = color + vec3(0.5, 0.5, 0.5);
 
-  return Surface(bear, color, emissionColor, 0.5, 0.2);
+  Surface res = Surface(bear, color, emissionColor, 0.5, 0.2);
+
+  return opUnion(res, cent);
 }
 
 ///////////////////////////////////////////////////////////////
@@ -146,11 +159,11 @@ Surface sdGummyBear(vec3 pos, float scale, float angle)
 Surface map(in vec3 pos)
 {
   vec3 p = pos + vec3(0.0, -2.0, 0.0);
-  Surface bear = sdGummyBear(p, 1.5, 0.5);
-
+  Surface bear = sdGummyBear(p, 1.5, vec3(0.0, 0.7, 0.0));
+/*
   Surface plane = sdPlane(pos, vec3(0.0, 1.0, 0.0), 0.0, vec3(1.0), vec3(0.0), 0., 0.1);
 
-  bear = opUnion(bear, plane);
+  bear = opUnion(bear, plane);*/
 
   return bear;
 }
