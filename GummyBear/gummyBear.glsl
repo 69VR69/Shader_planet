@@ -11,6 +11,11 @@ struct Surface
 
 ///////////////////////////////////////////////////////////
 
+float rand(vec2 co)
+{
+  return fract(sin(dot(co.xy, vec2(12.9898, 78.233)) * 43758.5453));
+}
+
 float opUnion(float d1, float d2)
 {
   return min(d1, d2);
@@ -81,6 +86,17 @@ float sdPlane(vec3 p, vec3 n, float h)
   return dot(p, n) + h;
 }
 
+Surface sdPlane(vec3 p, vec3 n, float h, vec3 col, vec3 emission, float roughness, float metallic)
+{
+  Surface s;
+  s.sd = sdPlane(p, n, h);
+  s.col = col;
+  s.emission = emission;
+  s.roughness = roughness;
+  s.metallic = metallic;
+  return s;
+}
+
 Surface sdGummyBear(vec3 pos)
 {
   vec3 p = pos;
@@ -119,7 +135,10 @@ Surface sdGummyBear(vec3 pos)
   float lEar = sdRotatedCutSphere(p, .5, 0.01, vec3(0., -0.5, 01.5));
   bear = opSmoothUnion(bear, lEar, 0.4);
 
-  return Surface(bear, vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), 0.0, 0.0);
+  vec3 color = vec3(1.0, 0.0, 0.0);
+  vec3 emissionColor = color + vec3(0.5, 0.5, 0.5);
+
+  return Surface(bear, color, emissionColor, 0.5, 0.2);
 }
 
 ///////////////////////////////////////////////////////////////
@@ -128,6 +147,10 @@ Surface map(in vec3 pos)
 {
   vec3 p = pos + vec3(0.0, -2.0, 0.0);
   Surface bear = sdGummyBear(p);
+
+  Surface plane = sdPlane(pos, vec3(0.0, 1.0, 0.0), 0.0, vec3(1.0), vec3(0.0), 0., 0.1);
+
+  bear = opUnion(bear, plane);
 
   return bear;
 }
@@ -195,10 +218,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
    //Better Camera 
   vec2 camRot = vec2(.5, .5) + vec2(-.35, 4.5) * (iMouse.yx / iResolution.yx);
   vec3 ro, rd;
-  CamPolar(ro, rd, vec3(0), camRot, 15.0, 1.0, fragCoord);
+  CamPolar(ro, rd, vec3(0), camRot, 20.0, 0.8, fragCoord);
 
   float t = 0.1;
-  float tend = 15.;
+  float tend = 25.;
   Surface s;
   for(int i = 0; i < 128; i++)
   {
@@ -213,7 +236,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
   vec3 col = texture(iChannel0, p / iResolution.xy).rgb;
 
   vec3 ambiant_color = vec3(0.0, 0.02, 0.03);
-  vec3 light_color = vec3(0.97, 0.85, 0.78);
+  vec3 light_color = vec3(0.97, 0.8, 0.8);
   if(t < tend)
   {
     vec3 pos = ro + t * rd;
@@ -222,13 +245,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float dif = clamp(dot(nor, lig), 0.0, 1.0);
     float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
     float amb = 0.5 + 0.5 * nor.y;
+    col = ambiant_color * amb + light_color * dif * sha * s.col;
 
+    if(s.metallic > 0.0 || s.roughness > 0.0)
+    {
     // Glass effect
-    vec3 refl = reflect(rd, nor);
-    vec3 refr = refract(rd, nor, 1.0 / 1.5);
-    vec3 glassCol = vec3(0.8, 0.9, 1.0);
-    float fresnel = 0.1 + 0.9 * pow(1.0 - dot(-rd, nor), 5.0);
-    col = ambiant_color * amb + light_color * dif * sha * s.col * (1.0 - fresnel) + glassCol * fresnel * texture(iChannel0, p + refr.xy * 0.1).rgb + 0.1 * texture(iChannel0, p + refl.xy * 0.1).rgb;
+      vec3 refl = reflect(rd, nor);
+      vec3 refr = refract(rd, nor, 1.0 / 1.5);
+      float fresnel = 0.1 + 0.9 * pow(1.0 - dot(-rd, nor), 5.0);
+      col = ambiant_color * amb + light_color * dif * sha * s.col * (1.0 - fresnel) + s.emission * fresnel * texture(iChannel0, p + refr.xy * s.roughness).rgb + 0.1 * texture(iChannel0, p + refl.xy * s.metallic).rgb;
+    }
   }
 
   col = sqrt(col);
