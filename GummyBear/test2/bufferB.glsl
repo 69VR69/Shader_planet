@@ -1,7 +1,7 @@
 #iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
 
-#define numboids 5.		// Number of boids (must be integer value represented as float)
+#define numboids 10.		// Number of boids (must be integer value represented as float)
 #define speed 10.0f			// Boid speed
 #define a1 0.001f			// Collision factor
 #define a2 0.01f			// Cohesion factor	
@@ -50,9 +50,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         {
             p += iTimeDelta * getBoidVelocity(id);			// update position
 
-            // Clamp p between 0 and 1
-            p.xy = clamp(p.xy, -2., 2.);
-            p.z = clamp(p.z, -5., 1.);
+            // If the boid go out of the screen, replace it on the  opposite side
+            vec3 maxBounds = vec3(8., 4., 4.);
+            vec3 minBounds = vec3(-maxBounds.xy, 0.);
+            
+            for(int i = 0; i < 3; i++)
+            {
+                if(p[i] > maxBounds[i]) p[i] = minBounds[i];
+                else if(p[i] < minBounds[i]) p[i] = maxBounds[i];
+            }
         }
 
         fragColor = vec4(p.xyz, 1.);

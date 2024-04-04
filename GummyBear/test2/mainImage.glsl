@@ -2,7 +2,7 @@
 #iChannel1 "file://bufferB.glsl"
 #iChannel2 "file://bufferC.glsl"
 
-#define numboids 5.		// number of boids (must be integer value represented as float)
+#define numboids 10.		// number of boids (must be integer value represented as float)
 
 vec3 getBoidPosition(float id)
 {
@@ -151,13 +151,16 @@ Surface map(in vec3 pos)
     for(int i = 0; i < int(numboids); i++)
     {
         vec3 boidPosition = getBoidPosition(float(i));
-        vec3 boidVelocity = getBoidVelocity(float(i));
+        vec3 boidVelocity = normalize(getBoidVelocity(float(i)));
 
         vec3 p = pos - boidPosition;
-        Surface s = sdGummyBear(p, 0.05, boidVelocity*180.);
+        Surface s = sdGummyBear(p, 0.05, boidVelocity * 3.1415);
 
         res = opUnion(res, s);
     }
+
+    //float t = sdRoundBox(pos + 1., vec3(8., 4., 4.), 0.1);
+    //return Surface(t, vec3(1.0), vec3(0.0), 0.0, 0.0);
 
     return res;
 }
@@ -222,7 +225,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
    //Better Camera 
   vec2 camRot = vec2(.5, .5) + vec2(-.35, 4.5);// * (iMouse.yx / iResolution.yx);
   vec3 ro, rd;
-  CamPolar(ro, rd, vec3(0), camRot, 5.0, 0.8, fragCoord);
+  CamPolar(ro, rd, vec3(0), camRot, 15.0, 0.8, fragCoord);
 
   float t = 0.1;
   float tend = 25.;

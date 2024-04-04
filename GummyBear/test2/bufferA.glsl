@@ -1,7 +1,7 @@
 #iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
 
-#define numboids 5.		// Number of boids (must be integer value represented as float)
+#define numboids 10.		// Number of boids (must be integer value represented as float)
 #define speed 10.0f			// Boid speed
 #define a1 0.001f			// Collision factor
 #define a2 0.01f			// Cohesion factor	
@@ -29,7 +29,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     // initialize random boid positions and velocities
     if(iFrame < 5)
     {
-        vec3 init_v = vec3(sin(id), cos(id), 0.);
+        vec3 init_v = vec3(sin(id), cos(id), -cos(id));
         init_v /= speed * length(init_v);
         fragColor = vec4(init_v, 1.);
     }
@@ -54,7 +54,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
                 vec3 sep = p_neighbor - p;
                 float ls = length(sep);
-                float r = 50.;				// separation radius
+                float r = 2.;				// separation radius
 
             	// Collision Update
                 if(ls < r)
