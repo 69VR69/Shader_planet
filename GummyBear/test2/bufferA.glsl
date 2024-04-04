@@ -1,7 +1,7 @@
 #iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
 
-#define numboids 20.		// Number of boids (must be integer value represented as float)
+#define numboids 5.		// Number of boids (must be integer value represented as float)
 #define speed 10.0f			// Boid speed
 #define a1 0.001f			// Collision factor
 #define a2 0.01f			// Cohesion factor	
