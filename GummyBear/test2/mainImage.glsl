@@ -26,7 +26,7 @@ vec3 getBoidVelocity(float id)
 
 float map(in vec3 pos)
 {
-    
+
     float res = 1000.0;
 
     for(int i = 0; i < int(numboids); i++)
@@ -35,7 +35,7 @@ float map(in vec3 pos)
         vec3 boidPosition = getBoidPosition(float(i));
 
         vec3 p = pos - boidPosition;
-        float d = sdBox(p, vec3(0.01));
+        float d = sdBox(p, vec3(0.05));
 
         res = opUnion(res, d);
     }
@@ -90,14 +90,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     if(t < 11.0)
     {
-        /*vec3 pos = ro + t * rd;
+        vec3 pos = ro + t * rd;
         vec3 nor = calcNormal(pos);
         vec3 lig = normalize(vec3(1.0, 0.8, -0.2));
         float dif = clamp(dot(nor, lig), 0.0, 1.0);
         float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
         float amb = 0.5 + 0.5 * nor.y;
-        col = vec3(0.05, 0.1, 0.15) * amb + vec3(1.00, 0.9, 0.80) * dif * sha;*/
-        col = vec3(1.);
+        col = vec3(0.05, 0.1, 0.15) * amb + vec3(1.00, 0.9, 0.80) * dif * sha;
     }
     else
         col = vec3(0.0);
