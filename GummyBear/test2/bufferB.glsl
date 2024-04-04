@@ -29,7 +29,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     fragColor = vec4(0.0, 0.0, 0.0, 1.0);			// default data
 
-    //if (fragCoord.y > 1. || fragCoord.x > numboids) discard;
+    if (fragCoord.y > 1. || fragCoord.x > numboids) discard;
 
     float id = floor(fragCoord.x);
 
