@@ -2,7 +2,7 @@
 #iChannel1 "file://bufferB.glsl"
 #iChannel2 "file://bufferC.glsl"
 
-#define numboids 10.		// number of boids (must be integer value represented as float)
+#define numboids 50.		// number of boids (must be integer value represented as float)
 
 vec3 getBoidPosition(float id)
 {
@@ -225,7 +225,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
    //Better Camera 
   vec2 camRot = vec2(.5, .5) + vec2(-.35, 4.5);// * (iMouse.yx / iResolution.yx);
   vec3 ro, rd;
-  CamPolar(ro, rd, vec3(0), camRot, 15.0, 0.8, fragCoord);
+  CamPolar(ro, rd, vec3(0), camRot, 10.0, 0.8, fragCoord);
 
   float t = 0.1;
   float tend = 25.;

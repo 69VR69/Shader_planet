@@ -1,11 +1,7 @@
 #iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
 
-#define numboids 10.		// Number of boids (must be integer value represented as float)
-#define speed 10.0f			// Boid speed
-#define a1 0.001f			// Collision factor
-#define a2 0.01f			// Cohesion factor	
-#define a3 0.05f			// Alignment factor
+#define numboids 50.		// Number of boids (must be integer value represented as float)
 
 vec3 getBoidPosition(float id)
 {
@@ -34,32 +30,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float id = floor(fragCoord.x);
 
     // initialize random boid positions and velocities
-    if(iFrame < 5)
+    if(iFrame <= 1)
     {
         vec3 init_p = nrand(id);
         fragColor = vec4(init_p, 1.);
     }
     else
     {        
-
         // boid of interest
         vec3 p = getBoidPosition(id);
 
         // loop over neighboring boids and build update vectors accordingly
         for(float nid = 0.0; nid < numboids; nid++)
         {
-            p += iTimeDelta * getBoidVelocity(id);			// update position
-
-            // If the boid go out of the screen, replace it on the  opposite side
-            vec3 maxBounds = vec3(8., 4., 4.);
-            vec3 minBounds = vec3(-maxBounds.xy, 0.);
-            
-            for(int i = 0; i < 3; i++)
-            {
-                if(p[i] > maxBounds[i]) p[i] = minBounds[i];
-                else if(p[i] < minBounds[i]) p[i] = maxBounds[i];
-            }
+            p += iTimeDelta * getBoidVelocity(id) * 0.2;			// update position
         }
+        
+        // Add a little noise to the position
+        p += 0.01 * nrand(id);
 
         fragColor = vec4(p.xyz, 1.);
 
