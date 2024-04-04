@@ -76,10 +76,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             // Apply position and velocity updates
             v += a1 * v_collision + a2 * v_cohesion + a3 * v_alignment;
             v /= length(v) * speed;		// constrain velocity
-        }
-
-        // If the boid is out of bounds, invert its velocity
-        
+        }        
 
         fragColor = vec4(v.xyz, 1.);
 

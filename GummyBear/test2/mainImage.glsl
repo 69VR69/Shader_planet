@@ -4,17 +4,6 @@
 
 #define numboids 5.		// number of boids (must be integer value represented as float)
 
-float opUnion(float d1, float d2)
-{
-    return min(d1, d2);
-}
-
-float sdBox(vec3 p, vec3 b)
-{
-    vec3 q = abs(p) - b;
-    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
-}
-
 vec3 getBoidPosition(float id)
 {
     return texture(iChannel1, vec2(id + .5, .5) / iResolution.xy).xyz;
