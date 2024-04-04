@@ -1,5 +1,6 @@
 #iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
+#iChannel2 "file://bufferC.glsl"
 
 #define numboids 5.		// number of boids (must be integer value represented as float)
 
@@ -161,9 +162,10 @@ Surface map(in vec3 pos)
     for(int i = 0; i < int(numboids); i++)
     {
         vec3 boidPosition = getBoidPosition(float(i));
+        vec3 boidVelocity = getBoidVelocity(float(i));
 
         vec3 p = pos - boidPosition;
-        Surface s = sdGummyBear(p, 0.05, vec3(0.0));
+        Surface s = sdGummyBear(p, 0.05, boidVelocity*180.);
 
         res = opUnion(res, s);
     }
@@ -246,7 +248,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     t += h;
   }
 
-  vec3 col = vec3(0.0);
+  vec3 col = texture(iChannel2, p / iResolution.xy).rgb;
 
   vec3 ambiant_color = vec3(0.0, 0.02, 0.03);
   vec3 light_color = vec3(0.97, 0.8, 0.8);

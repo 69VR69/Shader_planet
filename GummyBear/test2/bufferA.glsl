@@ -78,6 +78,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             v /= length(v) * speed;		// constrain velocity
         }
 
+        // If the boid is out of bounds, invert its velocity
+        
+
         fragColor = vec4(v.xyz, 1.);
 
     }

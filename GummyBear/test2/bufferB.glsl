@@ -51,7 +51,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             p += iTimeDelta * getBoidVelocity(id);			// update position
 
             // Clamp p between 0 and 1
-            p = clamp(p, 0., 1.);
+            p.xy = clamp(p.xy, -2.1, 2.1);
+            p.z = clamp(p.z, -5., 1.);
         }
 
         fragColor = vec4(p.xyz, 1.);
