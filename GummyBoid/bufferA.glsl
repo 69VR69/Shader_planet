@@ -43,8 +43,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         vec3 p = getBoidPosition(id);
 
         // Boundary conditions
-        vec3 maxBounds = vec3(1.0, 1.0, 1.0)*4.;
-        vec3 minBounds = (-maxBounds) + vec3(0.0, 2.5, 0.0);
+        vec3 maxBounds = vec3(1.5, 1.0, 1.0)*6.;
+        vec3 minBounds = (-maxBounds) + vec3(0.0, 4.5, 0.0);
 
         // initialize velocity update vectors
         vec3 v_collision, v_cohesion, v_alignment, v_center_attraction = vec3(0.);
@@ -89,7 +89,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             v_alignment = v_alignment / (numboids - 1.0) - v;
 
             // Add an attractive force to the center of the screen
-            v_center_attraction = vec3(0., 0., 0.) - p;
+            v_center_attraction = vec3(0., 2., 0.) - p;
 
             // Apply position and velocity updates
             v += a1 * v_collision + a2 * v_cohesion + a3 * v_alignment + a4 * v_center_attraction;
