@@ -1,6 +1,6 @@
 #iChannel0 "file://bufferA.glsl"
 #iChannel1 "file://bufferB.glsl"
-#iChannel2 "file://bufferD.glsl"
+#iChannel2 "file://bufferC.glsl"
 
 #define numboids 50.		// number of boids (must be integer value represented as float)
 
