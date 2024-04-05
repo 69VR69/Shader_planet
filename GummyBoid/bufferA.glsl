@@ -44,7 +44,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
         // Boundary conditions
         vec3 maxBounds = vec3(1.0, 1.0, 1.0)*4.;
-        vec3 minBounds = -maxBounds;
+        vec3 minBounds = (-maxBounds) + vec3(0.0, 2.5, 0.0);
 
         // initialize velocity update vectors
         vec3 v_collision, v_cohesion, v_alignment, v_center_attraction = vec3(0.);

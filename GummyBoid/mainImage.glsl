@@ -44,6 +44,12 @@ float sdRoundBox(vec3 p, vec3 b, float r)
   return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
 }
 
+vec3 nrand(float id)
+{
+    return normalize(vec3(2.0 * fract(sin(id) * 43758.5453) - 1.0, 2.0 * fract(sin(id + 1.0) * 43758.5453) - 1.0, 2.0 * fract(sin(id + 2.0) * 43758.5453) - 1.0));
+
+}
+
 float sdSphere(vec3 p, float s)
 {
   return length(p) - s;
@@ -83,6 +89,28 @@ float sdRotatedCutSphere(vec3 p, float r, float h, vec3 angle)
   return sdCutSphere(p, r, h);
 }
 
+vec3 getGummyColor(float id)
+{
+    vec3 red = vec3(0.94,0.11,0.11);
+    vec3 orange = vec3(1.0, 0.30, 0.15);
+    vec3 yellow = vec3(1.0, 0.89, 0.2);
+    vec3 green = vec3(0.1,0.89,0.2);
+    vec3 whitered = vec3(1.,0.99,0.69);
+
+    float i = mod(id, 5.);
+
+    if(i == 0.)
+        return red;
+    else if(i == 1.)
+        return orange;
+    else if(i == 2.)
+        return yellow;
+    else if(i == 3.)
+        return green;
+    else
+        return whitered;
+}
+
 Surface sdPlane(vec3 p, vec3 n, float h, vec3 col, vec3 emission, float roughness, float metallic)
 {
   Surface s;
@@ -94,7 +122,7 @@ Surface sdPlane(vec3 p, vec3 n, float h, vec3 col, vec3 emission, float roughnes
   return s;
 }
 
-Surface sdGummyBear(vec3 pos, float scale, vec3 angle)
+Surface sdGummyBear(vec3 pos, float scale, vec3 angle, vec3 color)
 {
   pos = rotate(pos, angle);
 
@@ -134,7 +162,6 @@ Surface sdGummyBear(vec3 pos, float scale, vec3 angle)
   float lEar = sdRotatedCutSphere(p, .5 * scale, 0.01 * scale, vec3(0., -0.5, 01.5));
   bear = opSmoothUnion(bear, lEar, 0.4 * scale);
 
-  vec3 color = vec3(1.0, 0.0, 0.0);
   vec3 emissionColor = color + vec3(0.5, 0.5, 0.5);
 
   Surface res = Surface(bear, color, emissionColor,  0.5, 0.2);
@@ -148,19 +175,21 @@ Surface map(in vec3 pos)
 {
     Surface res = Surface(100.0, vec3(0.0), vec3(0.0), 0.0, 0.0);
 
-    for(int i = 0; i < int(numboids); i++)
+    for(float i = 0.; i < numboids; i++)
     {
-        vec3 boidPosition = getBoidPosition(float(i));
-        vec3 boidVelocity = normalize(getBoidVelocity(float(i)));
+        vec3 boidPosition = getBoidPosition(i);
+        vec3 boidVelocity = normalize(getBoidVelocity(i));
 
         vec3 p = pos - boidPosition;
-        Surface s = sdGummyBear(p, 0.05, boidVelocity * 3.1415);
+        Surface s = sdGummyBear(p, 0.05, boidVelocity * 3.1415, getGummyColor(i));
 
         res = opUnion(res, s);
     }
-
-    //float t = sdRoundBox(pos + 1., vec3(8., 4., 4.), 0.1);
-    //return Surface(t, vec3(1.0), vec3(0.0), 0.0, 0.0);
+    
+    // Floor
+    vec3 p = pos + vec3(0, 4., 0);
+    Surface floors = sdPlane(p, vec3(0, 1, 0), 0.0, vec3(1.), vec3(0.3,0.0,0.0), 0., 0.);
+    res = opUnion(res, floors);
 
     return res;
 }
@@ -215,6 +244,13 @@ void CamPolar(out vec3 pos, out vec3 ray, in vec3 origin, in vec2 rotation, in f
   pos = origin - distance * vec3(c.x * s.y, s.z, c.x * c.y);
 }
 
+vec3 getBackground(vec4 fragCoord)
+{
+  vec2 uv = (fragCoord.xy / iResolution.xy) * 2.0 - 1.0;
+    uv.x *= iResolution.x / iResolution.y;
+    return texture(iChannel2, uv).rgb;
+}
+
 //////////////////////////////////////////////////////////////
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
@@ -250,18 +286,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 nor = calcNormal(pos);
     vec3 lig = normalize(vec3(0.8, 0.8, -1.));
     float dif = clamp(dot(nor, lig), 0.0, 1.0);
-    float sha = calcSoftshadow(pos, lig, 0.001, 1.0, 16.0);
+    float sha = calcSoftshadow(pos, lig, 0.001, 3.0, 16.0);
     float amb = 0.5 + 0.5 * nor.y;
     col = ambiant_color * amb + light_color * dif * sha * s.col;
 
-    if(s.metallic > 0.0 || s.roughness > 0.0)
-    {
+   
     // Glass effect
       vec3 refl = reflect(rd, nor);
       vec3 refr = refract(rd, nor, 1.0 / 1.5);
       float fresnel = 0.1 + 0.9 * pow(1.0 - dot(-rd, nor), 5.0);
-      col = ambiant_color * amb + light_color * dif * sha * s.col * (1.0 - fresnel) + s.emission * fresnel * texture(iChannel0, p + refr.xy * s.roughness).rgb + 0.1 * texture(iChannel0, p + refl.xy * s.metallic).rgb;
-    }
+      col = ambiant_color * amb + light_color * dif * sha * s.col * (1.0 - fresnel) + 
+        s.emission * fresnel * texture(iChannel0, p + refr.xy * s.roughness).rgb + 
+        0.1 * texture(iChannel0, p + refl.xy * s.metallic).rgb;
+    
   }
 
   col = sqrt(col);
